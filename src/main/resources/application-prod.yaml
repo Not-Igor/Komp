@@ -1,0 +1,27 @@
+#server:
+#  port: ${PORT:8080}
+#  error:
+#    include-message: never
+#    include-binding-errors: never
+#
+#spring:
+#  datasource:
+#    url: "jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}"
+#    username: "${PGUSER}"
+#    password: "${PGPASSWORD}"
+#    driver-class-name: org.postgresql.Driver
+#
+#jpa:
+#  hibernate:
+#    ddl-auto: validate    # Don't auto-create tables in production
+#  show-sql: false         # Don't show SQL in production logs
+#  properties:
+#    hibernate:
+#      dialect: org.hibernate.dialect.PostgreSQLDialect
+#
+#  security:
+#    debug: false
+#
+#jwt:
+#  secret: ${JWT_SECRET}     # Environment variable
+#  expiration: 3600000       # 1 hour (shorter for security)
