@@ -1,12 +1,10 @@
 package com.egor.back_end.controller;
 
-import com.egor.back_end.dto.user.AuthenticationRequest;
-import com.egor.back_end.dto.user.AuthenticationResponse;
-import com.egor.back_end.dto.user.UserCreateDto;
-import com.egor.back_end.dto.user.UserDto;
+import com.egor.back_end.dto.user.*;
 import com.egor.back_end.model.User;
 import com.egor.back_end.service.UserService;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +31,12 @@ public class UserController {
     @PostMapping("/signup")
     public User signup(@Valid @RequestBody UserCreateDto userCreateDto) {
         return userService.signup(userCreateDto);
+    }
+
+    @GetMapping("/friends/{userId}")
+    public ResponseEntity<List<FriendDto>> getFriends(@PathVariable Long userId) {
+        List<FriendDto> friends = userService.getFriendsList(userId);
+        return ResponseEntity.ok(friends);
     }
 
 }

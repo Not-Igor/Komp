@@ -3,14 +3,12 @@ package com.egor.back_end.dto.user;
 public class FriendDto {
     private Long id;
     private String username;
-    private String email;
 
     public FriendDto() {}
 
-    public FriendDto(Long id, String username, String email) {
+    public FriendDto(Long id, String username) {
         this.id = id;
         this.username = username;
-        this.email = email;
     }
 
     public Long getId() {
@@ -29,11 +27,11 @@ public class FriendDto {
         this.username = username;
     }
 
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
+    @Override
+    public String toString() {
+        return "FriendDto{" +
+                "id=" + id +
+                ", username='" + username + '\'' +
+                '}';
     }
 }

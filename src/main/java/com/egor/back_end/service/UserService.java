@@ -1,6 +1,7 @@
 package com.egor.back_end.service;
 
 import com.egor.back_end.dto.user.AuthenticationResponse;
+import com.egor.back_end.dto.user.FriendDto;
 import com.egor.back_end.dto.user.UserCreateDto;
 import com.egor.back_end.dto.user.UserDto;
 import com.egor.back_end.exceptions.SignupException;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -62,6 +64,15 @@ public class UserService {
                 Role.USER
         );
         return userRepository.save(user);
+    }
+
+    public List<FriendDto> getFriendsList(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        return user.getFriends().stream()
+                .map(friend -> new FriendDto(friend.getId(), friend.getUsername()))
+                .collect(Collectors.toList());
     }
 
 }
