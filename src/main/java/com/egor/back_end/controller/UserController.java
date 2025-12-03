@@ -39,4 +39,10 @@ public class UserController {
         return ResponseEntity.ok(friends);
     }
 
+    @GetMapping("/profile/{userId}")
+    public ResponseEntity<UserProfileDto> getUserProfile(@PathVariable Long userId) {
+        UserProfileDto profile = userService.getUserProfile(userId);
+        return ResponseEntity.ok(profile);
+    }
+
 }

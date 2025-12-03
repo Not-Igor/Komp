@@ -4,6 +4,7 @@ import com.egor.back_end.dto.user.AuthenticationResponse;
 import com.egor.back_end.dto.user.FriendDto;
 import com.egor.back_end.dto.user.UserCreateDto;
 import com.egor.back_end.dto.user.UserDto;
+import com.egor.back_end.dto.user.UserProfileDto;
 import com.egor.back_end.exceptions.SignupException;
 import com.egor.back_end.model.Role;
 import com.egor.back_end.model.User;
@@ -73,6 +74,25 @@ public class UserService {
         return user.getFriends().stream()
                 .map(friend -> new FriendDto(friend.getId(), friend.getUsername()))
                 .collect(Collectors.toList());
+    }
+
+    public UserProfileDto getUserProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        String avatarUrl = generateAvatarUrl(user.getUsername());
+        
+        return new UserProfileDto(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getRole(),
+                avatarUrl
+        );
+    }
+
+    private String generateAvatarUrl(String username) {
+        return "https://api.dicebear.com/7.x/avataaars/svg?seed=" + username;
     }
 
 }
