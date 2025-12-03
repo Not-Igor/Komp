@@ -67,6 +67,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    CorsProperties corsProperties) throws Exception {
         return http
+                .cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(
                         authorizeRequests -> authorizeRequests
                                 // Allow all access to health check
@@ -82,8 +84,6 @@ public class SecurityConfig {
                                 // Allow test utilities access
                                 .requestMatchers("/test-utils/**").permitAll()
                                 .anyRequest().authenticated())
-                .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable())
                 .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()))
                 .build();
     }
