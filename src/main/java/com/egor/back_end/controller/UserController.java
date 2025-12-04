@@ -46,9 +46,9 @@ public class UserController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<UserDto> searchUserByUsername(@RequestParam String username) {
-        UserDto user = userService.searchUserByUsername(username);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<List<UserDto>> searchUserByUsername(@RequestParam String username) {
+        List<UserDto> users = userService.searchUserByUsername(username);
+        return ResponseEntity.ok(users);
     }
 
 }
