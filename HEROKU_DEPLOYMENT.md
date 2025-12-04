@@ -1,84 +1,72 @@
-# Heroku Deployment Guide
+# Heroku Deployment Instructies
 
-## Vereiste Environment Variables voor Heroku
+## ⚠️ BELANGRIJK: Productie Data Behouden
 
-Stel de volgende environment variables in via Heroku Dashboard of CLI:
+De applicatie is nu geconfigureerd om **GEEN data te verwijderen** in productie.
 
-### Kritieke Security Variables
+### Development vs Production
 
-```bash
-# JWT Secret - genereer een sterke random string!
-heroku config:set JWT_SECRET="your-super-secret-key-at-least-32-chars-long"
+| Mode | Profile | DbInitializer | Database Reset |
+|------|---------|---------------|----------------|
+| **Development** | `dev` | ✅ Actief | ✅ Reset bij elke start |
+| **Production** | `prod` | ❌ Inactief | ❌ Data blijft behouden |
 
-# JWT Expiration (in milliseconds, 86400000 = 24 uur)
-heroku config:set JWT_EXPIRATION=86400000
+## Heroku Config Vars Instellen
 
-# CORS Origins - pas aan naar je frontend URL
-heroku config:set CORS_ORIGINS="https://your-frontend-app.herokuapp.com,http://localhost:3000"
-
-# Database configuratie (Heroku PostgreSQL doet dit automatisch via DATABASE_URL)
-# Security debug uitschakelen
-heroku config:set SECURITY_DEBUG=false
-
-# H2 Console uitschakelen in productie
-heroku config:set H2_CONSOLE_ENABLED=false
-
-# SQL logging uitschakelen in productie
-heroku config:set SHOW_SQL=false
-
-# DDL Auto op 'update' zetten voor productie (niet 'create-drop'!)
-heroku config:set DDL_AUTO=update
-```
-
-### Voor PostgreSQL (aanbevolen voor productie)
-
-Als je PostgreSQL gebruikt op Heroku:
+### Verplichte Environment Variables:
 
 ```bash
-# Heroku voorziet automatisch DATABASE_URL voor PostgreSQL
-# Maar je moet mogelijk de dialect aanpassen:
-heroku config:set HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+# Set profile to production
+heroku config:set SPRING_PROFILE=prod --app kompapp-backend
+
+# Database wordt automatisch ingesteld door Heroku PostgreSQL addon
+# DATABASE_URL wordt automatisch toegevoegd
+
+# CORS origins (voeg je Vercel frontend URL toe)
+heroku config:set CORS_ORIGINS=https://kompapp-frontend.vercel.app,https://kompapp-backend-e3cd8ff5eeb6.herokuapp.com --app kompapp-backend
+
+# JWT Secret (gebruik een veilige random string!)
+heroku config:set JWT_SECRET=your-very-secure-random-string-here --app kompapp-backend
 ```
 
-## Heroku CLI Commands
+### Controleer je config:
+```bash
+heroku config --app kompapp-backend
+```
+
+## Deployment
 
 ```bash
-# Login
-heroku login
+# Push naar main branch (Heroku deploy)
+git push heroku develop:main
 
-# Create app
-heroku create your-app-name
-
-# Add PostgreSQL (optioneel maar aanbevolen)
-heroku addons:create heroku-postgresql:mini
-
-# Deploy
-git push heroku main
-
-# View logs
-heroku logs --tail
-
-# Open app
-heroku open
+# Of als je auto-deploy hebt ingesteld via GitHub:
+git push origin main
 ```
 
-## Security Checklist voor Productie
+## Database Migratie
 
-- [ ] JWT_SECRET is een sterke, random gegenereerde string (minimaal 32 karakters)
-- [ ] CORS_ORIGINS bevat alleen je echte frontend URL(s)
-- [ ] H2_CONSOLE_ENABLED is false (of gebruik PostgreSQL)
-- [ ] SECURITY_DEBUG is false
-- [ ] SHOW_SQL is false (geen SQL queries in logs)
-- [ ] DDL_AUTO is 'update' of 'validate' (niet 'create-drop')
-- [ ] Database wachtwoorden staan in environment variables, niet in code
-- [ ] .env files zijn in .gitignore
+Als je de database structuur wijzigt:
 
-## Genereer sterke JWT Secret
+1. **Development**: Wijzigingen worden automatisch toegepast (ddl-auto: update)
+2. **Production**: Gebruik database migrations (Flyway/Liquibase) of handmatige updates
 
-```bash
-# Met OpenSSL
-openssl rand -base64 64
+## Eerste Keer Productie Setup
 
-# Of met Python
-python3 -c "import secrets; print(secrets.token_urlsafe(64))"
-```
+Na eerste deployment naar Heroku:
+
+1. ✅ Data is LEEG (geen test users)
+2. ✅ Registreer je eerste admin user via frontend
+3. ✅ Alle nieuwe registraties blijven behouden
+4. ✅ Bij herstart blijft alle data intact
+
+## Troubleshooting
+
+### "Geen users in database na deployment"
+Dit is normaal! DbInitializer draait NIET in productie. Registreer users via de frontend.
+
+### "Data verdwijnt na herstart"
+Check of `SPRING_PROFILE=prod` is ingesteld in Heroku config vars.
+
+### "Database connection errors"
+Check of Heroku PostgreSQL addon correct is toegevoegd en DATABASE_URL is ingesteld.
