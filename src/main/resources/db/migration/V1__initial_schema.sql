@@ -1,8 +1,9 @@
 -- Initial schema creation
 -- This migration creates the base tables if they don't exist
+-- Compatible with both H2 and PostgreSQL
 
 CREATE TABLE IF NOT EXISTS users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     email VARCHAR(255),
@@ -18,7 +19,7 @@ CREATE TABLE IF NOT EXISTS user_friends (
 );
 
 CREATE TABLE IF NOT EXISTS friend_requests (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     sender_id BIGINT NOT NULL,
     receiver_id BIGINT NOT NULL,
     status VARCHAR(50) NOT NULL,
