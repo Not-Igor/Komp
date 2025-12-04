@@ -4,10 +4,13 @@ import com.egor.back_end.model.*;
 import com.egor.back_end.repository.FriendRequestRepository;
 import com.egor.back_end.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("dev") // Only run in development profile
 public class DbInitializer {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
