@@ -139,12 +139,18 @@ public class DbInitializer {
 
         // Steve's friends
         addFriendship(steve, tina);
+        
+        // Save all users after adding friendships
+        userRepository.saveAll(java.util.List.of(
+            alice, bob, charlie, diana, ethan, fiona, george, hannah,
+            ivan, julia, kevin, laura, mike, nina, oliver, petra,
+            quinn, rachel, steve, tina
+        ));
     }
 
     private void addFriendship(User user1, User user2) {
         user1.getFriends().add(user2);
         user2.getFriends().add(user1);
-        // No need to save explicitly - @Transactional will handle it
     }
 
 }
