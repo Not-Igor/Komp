@@ -6,11 +6,13 @@ import com.egor.back_end.repository.FriendRequestRepository;
 import com.egor.back_end.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class FriendRequestService {
     private final FriendRequestRepository friendRequestRepository;
     private final UserRepository userRepository;
@@ -44,7 +46,8 @@ public class FriendRequestService {
     }
 
     public void respondToRequest(Long requestId, boolean accepted) {
-        FriendRequest friendRequest = friendRequestRepository.findById(requestId).orElseThrow(() -> new IllegalArgumentException("Friend request not found!"));
+        FriendRequest friendRequest = friendRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Friend request not found!"));
 
         if (friendRequest.getStatus() != FriendRequest.Status.PENDING) {
             throw new IllegalArgumentException("Friend request is not pending!");
@@ -52,16 +55,21 @@ public class FriendRequestService {
 
         if (accepted) {
             friendRequest.setStatus(FriendRequest.Status.ACCEPTED);
+            friendRequestRepository.save(friendRequest);
 
-            // Add each other as friends.
+            // Add each other as friends
             User sender = friendRequest.getSender();
             User receiver = friendRequest.getReceiver();
+            
+            // Add bidirectional friendship
             sender.getFriends().add(receiver);
             receiver.getFriends().add(sender);
+            
+            // Save both users
             userRepository.save(sender);
             userRepository.save(receiver);
-            friendRequestRepository.save(friendRequest);
         } else {
+            // Delete the friend request if rejected
             friendRequestRepository.delete(friendRequest);
         }
     }
