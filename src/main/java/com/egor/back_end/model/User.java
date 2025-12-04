@@ -19,7 +19,6 @@ public class User {
     @NotNull
     @JsonIgnore
     private String password;
-    @NotNull
     private String email;
     @Enumerated(EnumType.STRING)
     @NotNull
@@ -39,6 +38,12 @@ public class User {
         this.username = username;
         this.password = password;
         this.email = email;
+        this.role = role;
+    }
+
+    public User(String username, String password, Role role) {
+        this.username = username;
+        this.password = password;
         this.role = role;
     }
 
