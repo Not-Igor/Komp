@@ -95,10 +95,17 @@ public class UserService {
         return "https://api.dicebear.com/7.x/avataaars/svg?seed=" + username;
     }
 
-    public UserDto searchUserByUsername(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        return new UserDto(user.getId(), user.getUsername(), user.getEmail(), user.getRole());
+    public List<UserDto> searchUserByUsername(String username) {
+        List<User> users = userRepository.findByUsernameContainingIgnoreCase(username);
+        
+        if (users.isEmpty()) {
+            throw new IllegalArgumentException("No users found");
+        }
+        
+        return users.stream()
+                .map(user -> new UserDto(user.getId(), user.getUsername(), user.getEmail(), user.getRole()))
+                .limit(5) // Limit to 5 results
+                .collect(Collectors.toList());
     }
 
 }
