@@ -95,4 +95,10 @@ public class UserService {
         return "https://api.dicebear.com/7.x/avataaars/svg?seed=" + username;
     }
 
+    public UserDto searchUserByUsername(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return new UserDto(user.getId(), user.getUsername(), user.getEmail(), user.getRole());
+    }
+
 }

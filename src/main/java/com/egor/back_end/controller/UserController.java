@@ -45,4 +45,10 @@ public class UserController {
         return ResponseEntity.ok(profile);
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<UserDto> searchUserByUsername(@RequestParam String username) {
+        UserDto user = userService.searchUserByUsername(username);
+        return ResponseEntity.ok(user);
+    }
+
 }
