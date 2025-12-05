@@ -53,6 +53,13 @@ public class CompetitionService {
         return toDto(savedCompetition);
     }
 
+    @Transactional
+    public CompetitionDto createCompetitionByUsername(String username, CompetitionCreateDto dto) {
+        User creator = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Creator not found"));
+        return createCompetition(creator.getId(), dto);
+    }
+
     public CompetitionDto getCompetitionById(Long id) {
         Competition competition = competitionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Competition not found"));
@@ -95,6 +102,13 @@ public class CompetitionService {
         }
         
         competitionRepository.delete(competition);
+    }
+
+    @Transactional
+    public void deleteCompetitionByUsername(Long competitionId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        deleteCompetition(competitionId, user.getId());
     }
 
     private CompetitionDto toDto(Competition competition) {

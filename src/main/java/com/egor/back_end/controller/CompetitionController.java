@@ -4,7 +4,6 @@ import com.egor.back_end.dto.competition.CompetitionCreateDto;
 import com.egor.back_end.dto.competition.CompetitionDto;
 import com.egor.back_end.dto.competition.ParticipantDto;
 import com.egor.back_end.service.CompetitionService;
-import com.egor.back_end.service.UserDetailsImpl;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,10 +25,9 @@ public class CompetitionController {
     public ResponseEntity<CompetitionDto> createCompetition(
             @Valid @RequestBody CompetitionCreateDto dto,
             Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        Long userId = userDetails.getUser().getId();
+        String username = authentication.getName();
         
-        CompetitionDto competition = competitionService.createCompetition(userId, dto);
+        CompetitionDto competition = competitionService.createCompetitionByUsername(username, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(competition);
     }
 
@@ -61,10 +59,9 @@ public class CompetitionController {
     public ResponseEntity<Void> deleteCompetition(
             @PathVariable Long id,
             Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        Long userId = userDetails.getUser().getId();
+        String username = authentication.getName();
         
-        competitionService.deleteCompetition(id, userId);
+        competitionService.deleteCompetitionByUsername(id, username);
         return ResponseEntity.noContent().build();
     }
 }
