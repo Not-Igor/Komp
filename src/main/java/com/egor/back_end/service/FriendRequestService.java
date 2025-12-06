@@ -1,6 +1,7 @@
 package com.egor.back_end.service;
 
 import com.egor.back_end.model.FriendRequest;
+import com.egor.back_end.model.NotificationType;
 import com.egor.back_end.model.User;
 import com.egor.back_end.repository.FriendRequestRepository;
 import com.egor.back_end.repository.UserRepository;
@@ -17,10 +18,15 @@ public class FriendRequestService {
     private final FriendRequestRepository friendRequestRepository;
     private final UserRepository userRepository;
 
+    private final NotificationService notificationService;
+
     @Autowired
-    public FriendRequestService(FriendRequestRepository friendRequestRepository, UserRepository userRepository) {
+    public FriendRequestService(FriendRequestRepository friendRequestRepository, 
+                               UserRepository userRepository,
+                               NotificationService notificationService) {
         this.friendRequestRepository = friendRequestRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     public void sendFriendRequest(Long senderId, String receiverUsername) {
@@ -43,6 +49,14 @@ public class FriendRequestService {
         // Create and save request.
         FriendRequest friendRequest = new FriendRequest(sender, receiver);
         friendRequestRepository.save(friendRequest);
+        
+        // Create notification for receiver
+        notificationService.createNotification(
+            receiver,
+            NotificationType.FRIEND_REQUEST,
+            sender.getUsername() + " sent you a friend request",
+            friendRequest.getId()
+        );
     }
 
     public void respondToRequest(Long requestId, boolean accepted) {
@@ -68,6 +82,14 @@ public class FriendRequestService {
             // Save both users
             userRepository.save(sender);
             userRepository.save(receiver);
+            
+            // Notify sender that request was accepted
+            notificationService.createNotification(
+                sender,
+                NotificationType.FRIEND_REQUEST_ACCEPTED,
+                receiver.getUsername() + " accepted your friend request",
+                null
+            );
         } else {
             // Delete the friend request if rejected
             friendRequestRepository.delete(friendRequest);

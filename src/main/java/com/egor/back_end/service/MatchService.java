@@ -23,15 +23,18 @@ public class MatchService {
     private final CompetitionRepository competitionRepository;
     private final UserRepository userRepository;
     private final MatchScoreRepository matchScoreRepository;
+    private final NotificationService notificationService;
 
     public MatchService(MatchRepository matchRepository, 
                        CompetitionRepository competitionRepository,
                        UserRepository userRepository,
-                       MatchScoreRepository matchScoreRepository) {
+                       MatchScoreRepository matchScoreRepository,
+                       NotificationService notificationService) {
         this.matchRepository = matchRepository;
         this.competitionRepository = competitionRepository;
         this.userRepository = userRepository;
         this.matchScoreRepository = matchScoreRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -71,6 +74,19 @@ public class MatchService {
         match.setStartedAt(LocalDateTime.now());
 
         Match savedMatch = matchRepository.save(match);
+        
+        // Notify all participants (except creator) about new match
+        for (User participant : participants) {
+            if (!participant.getId().equals(creator.getId())) {
+                notificationService.createNotification(
+                    participant,
+                    NotificationType.MATCH_CREATED,
+                    creator.getUsername() + " created a new match: " + title + " in " + competition.getTitle(),
+                    savedMatch.getId()
+                );
+            }
+        }
+        
         return toDto(savedMatch);
     }
 
