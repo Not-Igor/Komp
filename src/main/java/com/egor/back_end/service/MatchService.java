@@ -65,6 +65,10 @@ public class MatchService {
         }
         match.setParticipants(participants);
 
+        // Auto-start match when created
+        match.setStatus(MatchStatus.IN_PROGRESS);
+        match.setStartedAt(LocalDateTime.now());
+
         Match savedMatch = matchRepository.save(match);
         return toDto(savedMatch);
     }
