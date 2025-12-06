@@ -113,42 +113,42 @@ public class UserService {
     }
 
     @Transactional
-    public void updateUserProfile(UserUpdateDto dto, String currentUsername) {
-        log.info("Attempting to update profile for user: {}", currentUsername);
-        log.info("Update DTO: newUsername='{}', newPassword is present: {}", dto.getNewUsername(), dto.getNewPassword() != null && !dto.getNewPassword().isBlank());
+    public AuthenticationResponse updateUserProfile(UserUpdateDto dto, String currentUsername) {
+        User user = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + currentUsername));
 
-        try {
-            User user = userRepository.findByUsername(currentUsername)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-            // Update username
-            if (dto.getNewUsername() != null && !dto.getNewUsername().isBlank() && !dto.getNewUsername().equals(currentUsername)) {
-                log.info("Updating username for user: {}", currentUsername);
-                if (userRepository.existsByUsername(dto.getNewUsername())) {
-                    log.warn("Username '{}' is already taken.", dto.getNewUsername());
-                    throw new IllegalArgumentException("Username is already taken");
-                }
-                user.setUsername(dto.getNewUsername());
-                log.info("Username updated to: {}", dto.getNewUsername());
+        boolean usernameChanged = false;
+        // Update username
+        if (dto.getNewUsername() != null && !dto.getNewUsername().isBlank() && !dto.getNewUsername().equals(currentUsername)) {
+            if (userRepository.existsByUsername(dto.getNewUsername())) {
+                throw new IllegalArgumentException("Username is already taken");
             }
-
-            // Update password
-            if (dto.getNewPassword() != null && !dto.getNewPassword().isBlank()) {
-                log.info("Updating password for user: {}", currentUsername);
-                if (dto.getCurrentPassword() == null || !passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
-                    log.warn("Invalid current password attempt for user: {}", currentUsername);
-                    throw new IllegalArgumentException("Invalid current password");
-                }
-                user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
-                log.info("Password updated for user: {}", currentUsername);
-            }
-
-            log.info("Saving updated user: {}", user.getUsername());
-            userRepository.save(user);
-            log.info("Successfully saved user: {}", user.getUsername());
-        } catch (Exception e) {
-            log.error("Unhandled exception during profile update for user: " + currentUsername, e);
-            throw e; // Re-throw to allow global exception handler to catch it
+            user.setUsername(dto.getNewUsername());
+            usernameChanged = true;
         }
+
+        // Update password
+        if (dto.getNewPassword() != null && !dto.getNewPassword().isBlank()) {
+            if (dto.getCurrentPassword() == null || !passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+                throw new IllegalArgumentException("Invalid current password");
+            }
+            user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        }
+
+        User savedUser = userRepository.save(user);
+
+        if (usernameChanged) {
+            final var token = jwtService.generateToken(savedUser);
+            return new AuthenticationResponse(
+                    "Profile updated. New token issued.",
+                    token,
+                    savedUser.getId(),
+                    savedUser.getUsername(),
+                    savedUser.getEmail(),
+                    savedUser.getRole()
+            );
+        }
+
+        return new AuthenticationResponse("Profile updated successfully.", null, savedUser.getId(), savedUser.getUsername(), savedUser.getEmail(), savedUser.getRole());
     }
 }

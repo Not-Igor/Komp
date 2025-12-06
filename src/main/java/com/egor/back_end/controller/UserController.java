@@ -20,9 +20,9 @@ public class UserController {
     }
 
     @PutMapping("/profile")
-    public ResponseEntity<Void> updateUserProfile(@RequestBody UserUpdateDto userUpdateDto, Authentication authentication) {
-        userService.updateUserProfile(userUpdateDto, authentication.getName());
-        return ResponseEntity.ok().build();
+    public ResponseEntity<AuthenticationResponse> updateUserProfile(@RequestBody UserUpdateDto userUpdateDto, Authentication authentication) {
+        AuthenticationResponse response = userService.updateUserProfile(userUpdateDto, authentication.getName());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
