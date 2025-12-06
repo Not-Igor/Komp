@@ -24,7 +24,6 @@ public class User {
     @NotNull
     private Role role;
 
-    @Lob
     private String avatarUrl;
 
     @ManyToMany
