@@ -93,42 +93,83 @@ public class CompetitionService {
                 .filter(match -> match.getStatus() == MatchStatus.COMPLETED)
                 .toList();
         
-        // Calculate wins for each participant
-        Map<Long, Integer> winCounts = new HashMap<>();
+        // Initialize statistics for each participant
+        Map<Long, ParticipantStats> statsMap = new HashMap<>();
         for (User participant : competition.getParticipants()) {
-            winCounts.put(participant.getId(), 0);
+            statsMap.put(participant.getId(), new ParticipantStats(participant.getId(), participant.getUsername()));
         }
         
-        // Count wins
+        // Calculate statistics from matches
         for (Match match : matches) {
-            // Find the winner (participant with highest score)
-            Long winnerId = findMatchWinner(match);
-            if (winnerId != null) {
-                winCounts.put(winnerId, winCounts.getOrDefault(winnerId, 0) + 1);
+            if (match.getScores().isEmpty()) continue;
+            
+            // Get all participants in this match
+            Set<Long> matchParticipantIds = match.getParticipants().stream()
+                    .map(User::getId)
+                    .collect(Collectors.toSet());
+            
+            // Find highest score
+            Integer highestScore = match.getScores().stream()
+                    .map(MatchScore::getScore)
+                    .max(Integer::compareTo)
+                    .orElse(0);
+            
+            // Find all participants with highest score (for draws)
+            List<Long> winners = match.getScores().stream()
+                    .filter(score -> score.getScore().equals(highestScore))
+                    .map(score -> score.getUser().getId())
+                    .toList();
+            
+            boolean isDraw = winners.size() > 1;
+            
+            // Update stats for each participant in the match
+            for (MatchScore score : match.getScores()) {
+                Long userId = score.getUser().getId();
+                ParticipantStats stats = statsMap.get(userId);
+                if (stats != null) {
+                    stats.matchesPlayed++;
+                    stats.pointsScored += score.getScore();
+                    
+                    if (isDraw) {
+                        stats.draws++;
+                    } else if (winners.contains(userId)) {
+                        stats.wins++;
+                    } else {
+                        stats.losses++;
+                    }
+                }
             }
         }
         
-        // Create DTOs with win counts, sorted by wins descending
-        return competition.getParticipants().stream()
-                .map(user -> new ParticipantDto(
-                        user.getId(), 
-                        user.getUsername(), 
-                        winCounts.getOrDefault(user.getId(), 0)
+        // Create DTOs sorted by wins descending
+        return statsMap.values().stream()
+                .map(stats -> new ParticipantDto(
+                        stats.userId,
+                        stats.username,
+                        stats.wins,
+                        stats.matchesPlayed,
+                        stats.draws,
+                        stats.losses,
+                        stats.pointsScored
                 ))
-                .sorted((a, b) -> Integer.compare(b.score(), a.score())) // Sort by score descending
+                .sorted((a, b) -> Integer.compare(b.wins(), a.wins()))
                 .collect(Collectors.toList());
     }
     
-    private Long findMatchWinner(Match match) {
-        if (match.getScores().isEmpty()) {
-            return null;
-        }
+    // Helper class to track participant statistics
+    private static class ParticipantStats {
+        Long userId;
+        String username;
+        int wins = 0;
+        int matchesPlayed = 0;
+        int draws = 0;
+        int losses = 0;
+        int pointsScored = 0;
         
-        // Find the participant with the highest score
-        return match.getScores().stream()
-                .max(Comparator.comparing(MatchScore::getScore))
-                .map(score -> score.getUser().getId())
-                .orElse(null);
+        ParticipantStats(Long userId, String username) {
+            this.userId = userId;
+            this.username = username;
+        }
     }
 
     @Transactional
