@@ -101,4 +101,25 @@ public class FriendRequestService {
 
         return friendRequestRepository.findByReceiverAndStatus(receiver, FriendRequest.Status.PENDING);
     }
+
+    public List<FriendRequest> getSentRequests(Long senderId) {
+        User sender = userRepository.findById(senderId).orElseThrow(() -> new IllegalArgumentException("User not found!"));
+
+        return friendRequestRepository.findBySenderAndStatus(sender, FriendRequest.Status.PENDING);
+    }
+
+    public void cancelFriendRequest(Long requestId, Long userId) {
+        FriendRequest friendRequest = friendRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Friend request not found!"));
+
+        if (!friendRequest.getSender().getId().equals(userId)) {
+            throw new IllegalArgumentException("You can only cancel your own friend requests!");
+        }
+
+        if (friendRequest.getStatus() != FriendRequest.Status.PENDING) {
+            throw new IllegalArgumentException("Friend request is not pending!");
+        }
+
+        friendRequestRepository.delete(friendRequest);
+    }
 }

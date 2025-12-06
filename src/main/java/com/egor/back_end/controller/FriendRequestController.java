@@ -41,4 +41,23 @@ public class FriendRequestController {
                 .toList();
         return ResponseEntity.ok(dtoList);
     }
+
+    @GetMapping("/sent/{userId}")
+    public ResponseEntity<List<ReceivedFriendRequestDto>> getSentRequests(@PathVariable Long userId) {
+        List<FriendRequest> requests = friendRequestService.getSentRequests(userId);
+        List<ReceivedFriendRequestDto> dtoList = requests.stream()
+                .map(req -> new ReceivedFriendRequestDto(req.getId(), req.getReceiver().getUsername()))
+                .toList();
+        return ResponseEntity.ok(dtoList);
+    }
+
+    @DeleteMapping("/cancel/{requestId}/{userId}")
+    public ResponseEntity<?> cancelFriendRequest(@PathVariable Long requestId, @PathVariable Long userId) {
+        try {
+            friendRequestService.cancelFriendRequest(requestId, userId);
+            return ResponseEntity.ok("Friend request cancelled");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
