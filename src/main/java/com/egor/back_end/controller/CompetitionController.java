@@ -64,4 +64,27 @@ public class CompetitionController {
         competitionService.deleteCompetitionByUsername(id, username);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/participants")
+    public ResponseEntity<CompetitionDto> addParticipants(
+            @PathVariable Long id,
+            @RequestBody AddParticipantsRequest request,
+            Authentication authentication) {
+        String username = authentication.getName();
+        
+        CompetitionDto competition = competitionService.addParticipants(id, request.participantIds(), username);
+        return ResponseEntity.ok(competition);
+    }
+
+    @DeleteMapping("/{id}/leave")
+    public ResponseEntity<Void> leaveCompetition(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String username = authentication.getName();
+        
+        competitionService.leaveCompetition(id, username);
+        return ResponseEntity.noContent().build();
+    }
+
+    public record AddParticipantsRequest(List<Long> participantIds) {}
 }

@@ -13,19 +13,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class CompetitionService {
     private final CompetitionRepository competitionRepository;
     private final UserRepository userRepository;
     private final MatchRepository matchRepository;
+    private final NotificationService notificationService;
 
     public CompetitionService(CompetitionRepository competitionRepository, 
                             UserRepository userRepository,
-                            MatchRepository matchRepository) {
+                            MatchRepository matchRepository,
+                            NotificationService notificationService) {
         this.competitionRepository = competitionRepository;
         this.userRepository = userRepository;
         this.matchRepository = matchRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -190,6 +194,74 @@ public class CompetitionService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         deleteCompetition(competitionId, user.getId());
+    }
+
+    @Transactional
+    public CompetitionDto addParticipants(Long competitionId, List<Long> participantIds, String username) {
+        Competition competition = competitionRepository.findById(competitionId)
+                .orElseThrow(() -> new IllegalArgumentException("Competition not found"));
+        
+        User requestingUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        // Check if the user is a participant in this competition
+        if (!competition.getParticipants().contains(requestingUser)) {
+            throw new IllegalArgumentException("Only participants can add friends to this competition");
+        }
+        
+        // Add new participants
+        Set<User> participants = competition.getParticipants();
+        for (Long participantId : participantIds) {
+            User participant = userRepository.findById(participantId)
+                    .orElseThrow(() -> new IllegalArgumentException("Participant with ID " + participantId + " not found"));
+            participants.add(participant);
+        }
+        competition.setParticipants(participants);
+        
+        Competition savedCompetition = competitionRepository.save(competition);
+        return toDto(savedCompetition);
+    }
+
+    @Transactional
+    public void leaveCompetition(Long competitionId, String username) {
+        Competition competition = competitionRepository.findById(competitionId)
+                .orElseThrow(() -> new IllegalArgumentException("Competition not found"));
+        
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        // Check if user is the creator
+        if (competition.getCreator().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("The creator cannot leave the competition. Delete it instead.");
+        }
+        
+        // Get participants before leaving
+        Set<User> participantsBeforeLeaving = new HashSet<>(competition.getParticipants());
+
+        // Check if user is a participant
+        boolean isParticipant = participantsBeforeLeaving.stream()
+                .anyMatch(p -> p.getId().equals(user.getId()));
+        
+        if (!isParticipant) {
+            throw new IllegalArgumentException("You are not a participant in this competition");
+        }
+        
+        // Remove user from participants using native query to avoid Hibernate issues
+        competitionRepository.removeParticipant(competitionId, user.getId());
+        competitionRepository.flush(); // Ensure the removal is persisted before notifying
+
+        // Notify remaining participants
+        for (User participant : participantsBeforeLeaving) {
+            if (!participant.getId().equals(user.getId())) {
+                String message = String.format("%s has left the competition %s", user.getUsername(), competition.getTitle());
+                notificationService.createNotification(
+                    participant, 
+                    NotificationType.USER_LEFT_COMPETITION, 
+                    message,
+                    competition.getId()
+                );
+            }
+        }
     }
 
     private CompetitionDto toDto(Competition competition) {
