@@ -61,7 +61,6 @@ public class UserService {
         User user = new User(
                 userCreateDto.username(),
                 passwordEncoder.encode(userCreateDto.password()),
-                userCreateDto.email(),
                 Role.USER
         );
         return userRepository.save(user);

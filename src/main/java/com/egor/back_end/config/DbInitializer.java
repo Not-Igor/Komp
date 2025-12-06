@@ -4,6 +4,7 @@ import com.egor.back_end.model.*;
 import com.egor.back_end.repository.FriendRequestRepository;
 import com.egor.back_end.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,6 +31,7 @@ public class DbInitializer {
     }
 
     @PostConstruct
+    @Transactional
     public void init() {
         // Delete friend requests first to avoid constraint violations
         friendRequestRepository.deleteAll();
@@ -39,30 +41,116 @@ public class DbInitializer {
         final var admin = userRepository.save(new User(
                 "admin",
                 passwordEncoder.encode("admin123"),
-                "admin@kompapp.com",
                 Role.ADMIN));
 
-        // Create 20 test users with password "admin123"
-        userRepository.save(new User("alice_wonder", passwordEncoder.encode("admin123"), "alice@example.com", Role.USER));
-        userRepository.save(new User("bob_builder", passwordEncoder.encode("admin123"), "bob@example.com", Role.USER));
-        userRepository.save(new User("charlie_brown", passwordEncoder.encode("admin123"), "charlie@example.com", Role.USER));
-        userRepository.save(new User("diana_prince", passwordEncoder.encode("admin123"), "diana@example.com", Role.USER));
-        userRepository.save(new User("ethan_hunt", passwordEncoder.encode("admin123"), "ethan@example.com", Role.USER));
-        userRepository.save(new User("fiona_apple", passwordEncoder.encode("admin123"), "fiona@example.com", Role.USER));
-        userRepository.save(new User("george_west", passwordEncoder.encode("admin123"), "george@example.com", Role.USER));
-        userRepository.save(new User("hannah_montana", passwordEncoder.encode("admin123"), "hannah@example.com", Role.USER));
-        userRepository.save(new User("ivan_terrible", passwordEncoder.encode("admin123"), "ivan@example.com", Role.USER));
-        userRepository.save(new User("julia_roberts", passwordEncoder.encode("admin123"), "julia@example.com", Role.USER));
-        userRepository.save(new User("kevin_hart", passwordEncoder.encode("admin123"), "kevin@example.com", Role.USER));
-        userRepository.save(new User("laura_croft", passwordEncoder.encode("admin123"), "laura@example.com", Role.USER));
-        userRepository.save(new User("mike_tyson", passwordEncoder.encode("admin123"), "mike@example.com", Role.USER));
-        userRepository.save(new User("nina_simone", passwordEncoder.encode("admin123"), "nina@example.com", Role.USER));
-        userRepository.save(new User("oliver_twist", passwordEncoder.encode("admin123"), "oliver@example.com", Role.USER));
-        userRepository.save(new User("petra_stone", passwordEncoder.encode("admin123"), "petra@example.com", Role.USER));
-        userRepository.save(new User("quinn_fabray", passwordEncoder.encode("admin123"), "quinn@example.com", Role.USER));
-        userRepository.save(new User("rachel_green", passwordEncoder.encode("admin123"), "rachel@example.com", Role.USER));
-        userRepository.save(new User("steve_jobs", passwordEncoder.encode("admin123"), "steve@example.com", Role.USER));
-        userRepository.save(new User("tina_turner", passwordEncoder.encode("admin123"), "tina@example.com", Role.USER));
+        // Create 20 test users with password "admin123" (no email required)
+        var alice = userRepository.save(new User("alice_wonder", passwordEncoder.encode("admin123"), Role.USER));
+        var bob = userRepository.save(new User("bob_builder", passwordEncoder.encode("admin123"), Role.USER));
+        var charlie = userRepository.save(new User("charlie_brown", passwordEncoder.encode("admin123"), Role.USER));
+        var diana = userRepository.save(new User("diana_prince", passwordEncoder.encode("admin123"), Role.USER));
+        var ethan = userRepository.save(new User("ethan_hunt", passwordEncoder.encode("admin123"), Role.USER));
+        var fiona = userRepository.save(new User("fiona_apple", passwordEncoder.encode("admin123"), Role.USER));
+        var george = userRepository.save(new User("george_west", passwordEncoder.encode("admin123"), Role.USER));
+        var hannah = userRepository.save(new User("hannah_montana", passwordEncoder.encode("admin123"), Role.USER));
+        var ivan = userRepository.save(new User("ivan_terrible", passwordEncoder.encode("admin123"), Role.USER));
+        var julia = userRepository.save(new User("julia_roberts", passwordEncoder.encode("admin123"), Role.USER));
+        var kevin = userRepository.save(new User("kevin_hart", passwordEncoder.encode("admin123"), Role.USER));
+        var laura = userRepository.save(new User("laura_croft", passwordEncoder.encode("admin123"), Role.USER));
+        var mike = userRepository.save(new User("mike_tyson", passwordEncoder.encode("admin123"), Role.USER));
+        var nina = userRepository.save(new User("nina_simone", passwordEncoder.encode("admin123"), Role.USER));
+        var oliver = userRepository.save(new User("oliver_twist", passwordEncoder.encode("admin123"), Role.USER));
+        var petra = userRepository.save(new User("petra_stone", passwordEncoder.encode("admin123"), Role.USER));
+        var quinn = userRepository.save(new User("quinn_fabray", passwordEncoder.encode("admin123"), Role.USER));
+        var rachel = userRepository.save(new User("rachel_green", passwordEncoder.encode("admin123"), Role.USER));
+        var steve = userRepository.save(new User("steve_jobs", passwordEncoder.encode("admin123"), Role.USER));
+        var tina = userRepository.save(new User("tina_turner", passwordEncoder.encode("admin123"), Role.USER));
+
+        // Create random friendships
+        // Alice's friends
+        addFriendship(alice, bob);
+        addFriendship(alice, charlie);
+        addFriendship(alice, fiona);
+        addFriendship(alice, hannah);
+
+        // Bob's friends
+        addFriendship(bob, diana);
+        addFriendship(bob, ethan);
+        addFriendship(bob, george);
+
+        // Charlie's friends
+        addFriendship(charlie, julia);
+        addFriendship(charlie, kevin);
+        addFriendship(charlie, mike);
+
+        // Diana's friends
+        addFriendship(diana, laura);
+        addFriendship(diana, nina);
+
+        // Ethan's friends
+        addFriendship(ethan, oliver);
+        addFriendship(ethan, petra);
+        addFriendship(ethan, quinn);
+
+        // Fiona's friends
+        addFriendship(fiona, rachel);
+        addFriendship(fiona, steve);
+
+        // George's friends
+        addFriendship(george, tina);
+        addFriendship(george, ivan);
+
+        // Hannah's friends
+        addFriendship(hannah, julia);
+        addFriendship(hannah, mike);
+
+        // Ivan's friends
+        addFriendship(ivan, kevin);
+        addFriendship(ivan, laura);
+
+        // Julia's friends
+        addFriendship(julia, nina);
+        addFriendship(julia, oliver);
+
+        // Kevin's friends
+        addFriendship(kevin, petra);
+        addFriendship(kevin, quinn);
+
+        // Laura's friends
+        addFriendship(laura, rachel);
+
+        // Mike's friends
+        addFriendship(mike, steve);
+        addFriendship(mike, tina);
+
+        // Nina's friends
+        addFriendship(nina, oliver);
+
+        // Oliver's friends
+        addFriendship(oliver, petra);
+
+        // Petra's friends
+        addFriendship(petra, quinn);
+
+        // Quinn's friends
+        addFriendship(quinn, rachel);
+
+        // Rachel's friends
+        addFriendship(rachel, steve);
+
+        // Steve's friends
+        addFriendship(steve, tina);
+        
+        // Save all users after adding friendships
+        userRepository.saveAll(java.util.List.of(
+            alice, bob, charlie, diana, ethan, fiona, george, hannah,
+            ivan, julia, kevin, laura, mike, nina, oliver, petra,
+            quinn, rachel, steve, tina
+        ));
+    }
+
+    private void addFriendship(User user1, User user2) {
+        user1.getFriends().add(user2);
+        user2.getFriends().add(user1);
     }
 
 }
