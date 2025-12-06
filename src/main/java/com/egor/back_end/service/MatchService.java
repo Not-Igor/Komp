@@ -132,12 +132,13 @@ public class MatchService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (!match.getCompetition().getCreator().getId().equals(user.getId())) {
-            throw new RuntimeException("Only competition creator can submit scores");
+        // Any participant can submit scores
+        if (!match.getParticipants().contains(user)) {
+            throw new RuntimeException("Only participants can submit scores");
         }
 
-        if (match.getStatus() != MatchStatus.IN_PROGRESS) {
-            throw new RuntimeException("Match must be in progress to submit scores");
+        if (match.getStatus() != MatchStatus.IN_PROGRESS && match.getStatus() != MatchStatus.COMPLETED) {
+            throw new RuntimeException("Cannot submit scores for this match");
         }
 
         // Clear existing scores
@@ -154,48 +155,15 @@ public class MatchService {
             }
 
             MatchScore score = new MatchScore(match, participant, entry.getValue());
+            score.setConfirmed(true); // Auto-confirm since anyone can submit
             match.getScores().add(score);
         }
 
         match.setScoresSubmitted(true);
+        match.setStatus(MatchStatus.COMPLETED);
         Match savedMatch = matchRepository.save(match);
 
         return toDto(savedMatch);
-    }
-
-    @Transactional
-    public MatchDto confirmScores(Long matchId, String username) {
-        Match match = matchRepository.findById(matchId)
-                .orElseThrow(() -> new RuntimeException("Match not found"));
-
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (!match.getParticipants().contains(user)) {
-            throw new RuntimeException("Only participants can confirm scores");
-        }
-
-        if (!match.isScoresSubmitted()) {
-            throw new RuntimeException("Scores have not been submitted yet");
-        }
-
-        // Find user's score and mark as confirmed
-        MatchScore userScore = matchScoreRepository.findByMatchAndUser(match, user)
-                .orElseThrow(() -> new RuntimeException("Score not found for user"));
-        
-        userScore.setConfirmed(true);
-        matchScoreRepository.save(userScore);
-
-        // Check if all participants have confirmed
-        boolean allConfirmed = match.getScores().stream()
-                .allMatch(MatchScore::isConfirmed);
-
-        if (allConfirmed) {
-            match.setStatus(MatchStatus.COMPLETED);
-            matchRepository.save(match);
-        }
-
-        return toDto(match);
     }
 
     private MatchDto toDto(Match match) {
