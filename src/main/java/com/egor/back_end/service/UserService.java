@@ -10,6 +10,8 @@ import com.egor.back_end.exceptions.SignupException;
 import com.egor.back_end.model.Role;
 import com.egor.back_end.model.User;
 import com.egor.back_end.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserService {
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -111,25 +114,41 @@ public class UserService {
 
     @Transactional
     public void updateUserProfile(UserUpdateDto dto, String currentUsername) {
-        User user = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        log.info("Attempting to update profile for user: {}", currentUsername);
+        log.info("Update DTO: newUsername='{}', newPassword is present: {}", dto.getNewUsername(), dto.getNewPassword() != null && !dto.getNewPassword().isBlank());
 
-        // Update username
-        if (dto.getNewUsername() != null && !dto.getNewUsername().isBlank() && !dto.getNewUsername().equals(currentUsername)) {
-            if (userRepository.existsByUsername(dto.getNewUsername())) {
-                throw new IllegalArgumentException("Username is already taken");
+        try {
+            User user = userRepository.findByUsername(currentUsername)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            // Update username
+            if (dto.getNewUsername() != null && !dto.getNewUsername().isBlank() && !dto.getNewUsername().equals(currentUsername)) {
+                log.info("Updating username for user: {}", currentUsername);
+                if (userRepository.existsByUsername(dto.getNewUsername())) {
+                    log.warn("Username '{}' is already taken.", dto.getNewUsername());
+                    throw new IllegalArgumentException("Username is already taken");
+                }
+                user.setUsername(dto.getNewUsername());
+                log.info("Username updated to: {}", dto.getNewUsername());
             }
-            user.setUsername(dto.getNewUsername());
-        }
 
-        // Update password
-        if (dto.getNewPassword() != null && !dto.getNewPassword().isBlank()) {
-            if (dto.getCurrentPassword() == null || !passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
-                throw new IllegalArgumentException("Invalid current password");
+            // Update password
+            if (dto.getNewPassword() != null && !dto.getNewPassword().isBlank()) {
+                log.info("Updating password for user: {}", currentUsername);
+                if (dto.getCurrentPassword() == null || !passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+                    log.warn("Invalid current password attempt for user: {}", currentUsername);
+                    throw new IllegalArgumentException("Invalid current password");
+                }
+                user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+                log.info("Password updated for user: {}", currentUsername);
             }
-            user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
-        }
 
-        userRepository.save(user);
+            log.info("Saving updated user: {}", user.getUsername());
+            userRepository.save(user);
+            log.info("Successfully saved user: {}", user.getUsername());
+        } catch (Exception e) {
+            log.error("Unhandled exception during profile update for user: " + currentUsername, e);
+            throw e; // Re-throw to allow global exception handler to catch it
+        }
     }
 }
