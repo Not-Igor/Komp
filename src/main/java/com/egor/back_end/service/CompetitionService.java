@@ -4,26 +4,28 @@ import com.egor.back_end.dto.competition.CompetitionCreateDto;
 import com.egor.back_end.dto.competition.CompetitionDto;
 import com.egor.back_end.dto.competition.ParticipantDto;
 import com.egor.back_end.dto.user.UserDto;
-import com.egor.back_end.model.Competition;
-import com.egor.back_end.model.User;
+import com.egor.back_end.model.*;
 import com.egor.back_end.repository.CompetitionRepository;
+import com.egor.back_end.repository.MatchRepository;
 import com.egor.back_end.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class CompetitionService {
     private final CompetitionRepository competitionRepository;
     private final UserRepository userRepository;
+    private final MatchRepository matchRepository;
 
-    public CompetitionService(CompetitionRepository competitionRepository, UserRepository userRepository) {
+    public CompetitionService(CompetitionRepository competitionRepository, 
+                            UserRepository userRepository,
+                            MatchRepository matchRepository) {
         this.competitionRepository = competitionRepository;
         this.userRepository = userRepository;
+        this.matchRepository = matchRepository;
     }
 
     @Transactional
@@ -86,9 +88,47 @@ public class CompetitionService {
         Competition competition = competitionRepository.findById(competitionId)
                 .orElseThrow(() -> new IllegalArgumentException("Competition not found"));
         
+        // Get all completed matches for this competition
+        List<Match> matches = matchRepository.findByCompetitionId(competitionId).stream()
+                .filter(match -> match.getStatus() == MatchStatus.COMPLETED)
+                .toList();
+        
+        // Calculate wins for each participant
+        Map<Long, Integer> winCounts = new HashMap<>();
+        for (User participant : competition.getParticipants()) {
+            winCounts.put(participant.getId(), 0);
+        }
+        
+        // Count wins
+        for (Match match : matches) {
+            // Find the winner (participant with highest score)
+            Long winnerId = findMatchWinner(match);
+            if (winnerId != null) {
+                winCounts.put(winnerId, winCounts.getOrDefault(winnerId, 0) + 1);
+            }
+        }
+        
+        // Create DTOs with win counts, sorted by wins descending
         return competition.getParticipants().stream()
-                .map(user -> new ParticipantDto(user.getId(), user.getUsername(), 0)) // TODO: Add actual score
+                .map(user -> new ParticipantDto(
+                        user.getId(), 
+                        user.getUsername(), 
+                        winCounts.getOrDefault(user.getId(), 0)
+                ))
+                .sorted((a, b) -> Integer.compare(b.score(), a.score())) // Sort by score descending
                 .collect(Collectors.toList());
+    }
+    
+    private Long findMatchWinner(Match match) {
+        if (match.getScores().isEmpty()) {
+            return null;
+        }
+        
+        // Find the participant with the highest score
+        return match.getScores().stream()
+                .max(Comparator.comparing(MatchScore::getScore))
+                .map(score -> score.getUser().getId())
+                .orElse(null);
     }
 
     @Transactional
