@@ -42,8 +42,9 @@ public class MatchService {
         User creator = userRepository.findByUsername(creatorUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (!competition.getCreator().getId().equals(creator.getId())) {
-            throw new RuntimeException("Only competition creator can create matches");
+        // Check if user is a participant of the competition
+        if (!competition.getParticipants().contains(creator)) {
+            throw new RuntimeException("Only competition participants can create matches");
         }
 
         Integer nextMatchNumber = matchRepository.countByCompetitionId(dto.competitionId()) + 1;
