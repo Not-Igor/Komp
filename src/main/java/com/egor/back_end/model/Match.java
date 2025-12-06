@@ -45,6 +45,12 @@ public class Match {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<MatchScore> scores = new HashSet<>();
+
+    @Column(name = "scores_submitted")
+    private boolean scoresSubmitted = false;
+
     protected Match() {}
 
     public Match(String title, Competition competition, Integer matchNumber) {
@@ -131,5 +137,21 @@ public class Match {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Set<MatchScore> getScores() {
+        return scores;
+    }
+
+    public void setScores(Set<MatchScore> scores) {
+        this.scores = scores;
+    }
+
+    public boolean isScoresSubmitted() {
+        return scoresSubmitted;
+    }
+
+    public void setScoresSubmitted(boolean scoresSubmitted) {
+        this.scoresSubmitted = scoresSubmitted;
     }
 }

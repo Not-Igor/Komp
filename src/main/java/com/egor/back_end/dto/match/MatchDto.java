@@ -15,5 +15,7 @@ public record MatchDto(
         MatchStatus status,
         LocalDateTime startedAt,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        List<MatchScoreDto> scores,
+        boolean scoresSubmitted
 ) {}

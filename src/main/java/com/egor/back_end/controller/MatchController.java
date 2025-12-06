@@ -71,4 +71,29 @@ public class MatchController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+    @PostMapping("/{matchId}/scores")
+    public ResponseEntity<MatchDto> submitScores(
+            @PathVariable Long matchId,
+            @Valid @RequestBody com.egor.back_end.dto.match.SubmitScoresDto dto,
+            Authentication authentication) {
+        try {
+            MatchDto match = matchService.submitScores(dto, authentication.getName());
+            return ResponseEntity.ok(match);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/{matchId}/confirm")
+    public ResponseEntity<MatchDto> confirmScores(
+            @PathVariable Long matchId,
+            Authentication authentication) {
+        try {
+            MatchDto match = matchService.confirmScores(matchId, authentication.getName());
+            return ResponseEntity.ok(match);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
 }

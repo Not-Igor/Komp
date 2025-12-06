@@ -2,18 +2,19 @@ package com.egor.back_end.service;
 
 import com.egor.back_end.dto.match.MatchCreateDto;
 import com.egor.back_end.dto.match.MatchDto;
+import com.egor.back_end.dto.match.MatchScoreDto;
+import com.egor.back_end.dto.match.SubmitScoresDto;
 import com.egor.back_end.dto.user.UserDto;
 import com.egor.back_end.model.*;
 import com.egor.back_end.repository.CompetitionRepository;
 import com.egor.back_end.repository.MatchRepository;
+import com.egor.back_end.repository.MatchScoreRepository;
 import com.egor.back_end.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,13 +22,16 @@ public class MatchService {
     private final MatchRepository matchRepository;
     private final CompetitionRepository competitionRepository;
     private final UserRepository userRepository;
+    private final MatchScoreRepository matchScoreRepository;
 
     public MatchService(MatchRepository matchRepository, 
                        CompetitionRepository competitionRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       MatchScoreRepository matchScoreRepository) {
         this.matchRepository = matchRepository;
         this.competitionRepository = competitionRepository;
         this.userRepository = userRepository;
+        this.matchScoreRepository = matchScoreRepository;
     }
 
     @Transactional
@@ -116,6 +120,80 @@ public class MatchService {
         matchRepository.delete(match);
     }
 
+    @Transactional
+    public MatchDto submitScores(SubmitScoresDto dto, String username) {
+        Match match = matchRepository.findById(dto.matchId())
+                .orElseThrow(() -> new RuntimeException("Match not found"));
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!match.getCompetition().getCreator().getId().equals(user.getId())) {
+            throw new RuntimeException("Only competition creator can submit scores");
+        }
+
+        if (match.getStatus() != MatchStatus.IN_PROGRESS) {
+            throw new RuntimeException("Match must be in progress to submit scores");
+        }
+
+        // Clear existing scores
+        match.getScores().clear();
+        matchScoreRepository.flush();
+
+        // Add new scores
+        for (Map.Entry<Long, Integer> entry : dto.scores().entrySet()) {
+            User participant = userRepository.findById(entry.getKey())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            if (!match.getParticipants().contains(participant)) {
+                throw new RuntimeException("User is not a participant of this match");
+            }
+
+            MatchScore score = new MatchScore(match, participant, entry.getValue());
+            match.getScores().add(score);
+        }
+
+        match.setScoresSubmitted(true);
+        Match savedMatch = matchRepository.save(match);
+
+        return toDto(savedMatch);
+    }
+
+    @Transactional
+    public MatchDto confirmScores(Long matchId, String username) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new RuntimeException("Match not found"));
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!match.getParticipants().contains(user)) {
+            throw new RuntimeException("Only participants can confirm scores");
+        }
+
+        if (!match.isScoresSubmitted()) {
+            throw new RuntimeException("Scores have not been submitted yet");
+        }
+
+        // Find user's score and mark as confirmed
+        MatchScore userScore = matchScoreRepository.findByMatchAndUser(match, user)
+                .orElseThrow(() -> new RuntimeException("Score not found for user"));
+        
+        userScore.setConfirmed(true);
+        matchScoreRepository.save(userScore);
+
+        // Check if all participants have confirmed
+        boolean allConfirmed = match.getScores().stream()
+                .allMatch(MatchScore::isConfirmed);
+
+        if (allConfirmed) {
+            match.setStatus(MatchStatus.COMPLETED);
+            matchRepository.save(match);
+        }
+
+        return toDto(match);
+    }
+
     private MatchDto toDto(Match match) {
         List<UserDto> participants = match.getParticipants().stream()
                 .map(user -> new UserDto(
@@ -123,6 +201,15 @@ public class MatchService {
                         user.getUsername(),
                         user.getEmail(),
                         user.getRole()
+                ))
+                .toList();
+
+        List<MatchScoreDto> scores = match.getScores().stream()
+                .map(score -> new MatchScoreDto(
+                        score.getUser().getId(),
+                        score.getUser().getUsername(),
+                        score.getScore(),
+                        score.isConfirmed()
                 ))
                 .toList();
 
@@ -135,7 +222,9 @@ public class MatchService {
                 match.getStatus(),
                 match.getStartedAt(),
                 match.getCreatedAt(),
-                match.getUpdatedAt()
+                match.getUpdatedAt(),
+                scores,
+                match.isScoresSubmitted()
         );
     }
 }
