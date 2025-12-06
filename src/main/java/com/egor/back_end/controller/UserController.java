@@ -5,6 +5,7 @@ import com.egor.back_end.model.User;
 import com.egor.back_end.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +17,12 @@ public class UserController {
 
     public UserController(UserService userService) {
         this.userService = userService;
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<Void> updateUserProfile(@RequestBody UserUpdateDto userUpdateDto, Authentication authentication) {
+        userService.updateUserProfile(userUpdateDto, authentication.getName());
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping

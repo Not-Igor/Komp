@@ -5,6 +5,7 @@ import com.egor.back_end.dto.user.FriendDto;
 import com.egor.back_end.dto.user.UserCreateDto;
 import com.egor.back_end.dto.user.UserDto;
 import com.egor.back_end.dto.user.UserProfileDto;
+import com.egor.back_end.dto.user.UserUpdateDto;
 import com.egor.back_end.exceptions.SignupException;
 import com.egor.back_end.model.Role;
 import com.egor.back_end.model.User;
@@ -13,6 +14,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -107,4 +109,27 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public void updateUserProfile(UserUpdateDto dto, String currentUsername) {
+        User user = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // Update username
+        if (dto.getNewUsername() != null && !dto.getNewUsername().isBlank() && !dto.getNewUsername().equals(currentUsername)) {
+            if (userRepository.existsByUsername(dto.getNewUsername())) {
+                throw new IllegalArgumentException("Username is already taken");
+            }
+            user.setUsername(dto.getNewUsername());
+        }
+
+        // Update password
+        if (dto.getNewPassword() != null && !dto.getNewPassword().isBlank()) {
+            if (dto.getCurrentPassword() == null || !passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+                throw new IllegalArgumentException("Invalid current password");
+            }
+            user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        }
+
+        userRepository.save(user);
+    }
 }
