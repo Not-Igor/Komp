@@ -6,6 +6,7 @@ import com.egor.back_end.dto.user.UserCreateDto;
 import com.egor.back_end.dto.user.UserDto;
 import com.egor.back_end.dto.user.UserProfileDto;
 import com.egor.back_end.dto.user.UserUpdateDto;
+import com.egor.back_end.dto.user.AvatarUpdateDto;
 import com.egor.back_end.exceptions.SignupException;
 import com.egor.back_end.model.Role;
 import com.egor.back_end.model.User;
@@ -84,7 +85,10 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
-        String avatarUrl = generateAvatarUrl(user.getUsername());
+        String avatarUrl = user.getAvatarUrl();
+        if (avatarUrl == null || avatarUrl.isBlank()) {
+            avatarUrl = "https://api.dicebear.com/7.x/avataaars/svg?seed=" + user.getUsername();
+        }
         
         return new UserProfileDto(
                 user.getId(),
@@ -93,10 +97,6 @@ public class UserService {
                 user.getRole(),
                 avatarUrl
         );
-    }
-
-    private String generateAvatarUrl(String username) {
-        return "https://api.dicebear.com/7.x/avataaars/svg?seed=" + username;
     }
 
     public List<UserDto> searchUserByUsername(String username) {
@@ -150,5 +150,14 @@ public class UserService {
         }
 
         return new AuthenticationResponse("Profile updated successfully.", null, savedUser.getId(), savedUser.getUsername(), savedUser.getEmail(), savedUser.getRole());
+    }
+
+    @Transactional
+    public void updateAvatar(AvatarUpdateDto dto, String currentUsername) {
+        User user = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + currentUsername));
+
+        user.setAvatarUrl(dto.getAvatarUrl());
+        userRepository.save(user);
     }
 }

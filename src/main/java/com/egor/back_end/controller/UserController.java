@@ -25,6 +25,12 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/profile/avatar")
+    public ResponseEntity<Void> updateAvatar(@RequestBody AvatarUpdateDto avatarUpdateDto, Authentication authentication) {
+        userService.updateAvatar(avatarUpdateDto, authentication.getName());
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping
     public List<User> getUsers() {
         return userService.getAllUsers();

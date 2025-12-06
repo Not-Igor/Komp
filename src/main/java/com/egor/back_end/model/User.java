@@ -24,6 +24,9 @@ public class User {
     @NotNull
     private Role role;
 
+    @Lob
+    private String avatarUrl;
+
     @ManyToMany
     @JoinTable(
             name = "user_friends",
@@ -47,9 +50,18 @@ public class User {
         this.role = role;
     }
 
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+
     public Long getId() {
         return id;
     }
+
 
     public void setId(Long id) {
         this.id = id;
