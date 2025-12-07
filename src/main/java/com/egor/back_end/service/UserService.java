@@ -1,16 +1,11 @@
 package com.egor.back_end.service;
 
-import com.egor.back_end.dto.user.AuthenticationResponse;
-import com.egor.back_end.dto.user.FriendDto;
-import com.egor.back_end.dto.user.UserCreateDto;
-import com.egor.back_end.dto.user.UserDto;
-import com.egor.back_end.dto.user.UserProfileDto;
-import com.egor.back_end.dto.user.UserUpdateDto;
-import com.egor.back_end.dto.user.AvatarUpdateDto;
+import com.egor.back_end.dto.user.*;
 import com.egor.back_end.exceptions.SignupException;
 import com.egor.back_end.model.Role;
 import com.egor.back_end.model.User;
 import com.egor.back_end.repository.UserRepository;
+import com.cloudinary.Cloudinary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,8 +13,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,15 +27,18 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final Cloudinary cloudinary;
 
     public UserService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       Cloudinary cloudinary) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
+        this.cloudinary = cloudinary;
     }
 
     public List<User> getAllUsers() {
@@ -153,11 +154,24 @@ public class UserService {
     }
 
     @Transactional
-    public void updateAvatar(AvatarUpdateDto dto, String currentUsername) {
+    public String updateAvatar(MultipartFile file, String currentUsername) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File cannot be empty");
+        }
+
         User user = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + currentUsername));
 
-        user.setAvatarUrl(dto.getAvatarUrl());
-        userRepository.save(user);
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, String> uploadResult = cloudinary.uploader().upload(file.getBytes(), Map.of());
+            String secureUrl = uploadResult.get("secure_url");
+
+            user.setAvatarUrl(secureUrl);
+            userRepository.save(user);
+            return secureUrl;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to upload avatar to Cloudinary", e);
+        }
     }
 }

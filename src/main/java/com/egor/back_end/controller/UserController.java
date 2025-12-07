@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -25,10 +26,10 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/profile/avatar")
-    public ResponseEntity<Void> updateAvatar(@RequestBody AvatarUpdateDto avatarUpdateDto, Authentication authentication) {
-        userService.updateAvatar(avatarUpdateDto, authentication.getName());
-        return ResponseEntity.ok().build();
+    @PostMapping("/profile/avatar") // Changed to PostMapping for file upload
+    public ResponseEntity<String> updateAvatar(@RequestParam("file") MultipartFile file, Authentication authentication) {
+        String avatarUrl = userService.updateAvatar(file, authentication.getName());
+        return ResponseEntity.ok(avatarUrl);
     }
 
     @GetMapping
