@@ -5,7 +5,6 @@ import com.egor.back_end.exceptions.SignupException;
 import com.egor.back_end.model.Role;
 import com.egor.back_end.model.User;
 import com.egor.back_end.repository.UserRepository;
-import com.cloudinary.Cloudinary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,11 +12,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,18 +23,15 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
-    private final Cloudinary cloudinary;
 
     public UserService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager,
-                       JwtService jwtService,
-                       Cloudinary cloudinary) {
+                       JwtService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
-        this.cloudinary = cloudinary;
     }
 
     public List<User> getAllUsers() {
@@ -154,24 +147,12 @@ public class UserService {
     }
 
     @Transactional
-    public String updateAvatar(MultipartFile file, String currentUsername) {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File cannot be empty");
-        }
-
+    public String updateAvatar(String avatarUrl, String currentUsername) {
         User user = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + currentUsername));
 
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, String> uploadResult = cloudinary.uploader().upload(file.getBytes(), Map.of());
-            String secureUrl = uploadResult.get("secure_url");
-
-            user.setAvatarUrl(secureUrl);
-            userRepository.save(user);
-            return secureUrl;
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to upload avatar to Cloudinary", e);
-        }
+        user.setAvatarUrl(avatarUrl);
+        userRepository.save(user);
+        return avatarUrl;
     }
 }
