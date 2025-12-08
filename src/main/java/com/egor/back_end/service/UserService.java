@@ -91,7 +91,7 @@ public class UserService {
     }
 
     private String generateAvatarUrl(String username) {
-        return "https://api.dicebear.com/7.x/avataaars/svg?seed=" + username;
+        return "https://api.dicebear.com/7.x/pixel-art/svg?seed=" + username;
     }
 
     public List<UserDto> searchUserByUsername(String username) {
