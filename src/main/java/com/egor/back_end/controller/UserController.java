@@ -7,7 +7,6 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-// import org.springframework.web.multipart.MultipartFile; // Removed
 
 import java.util.List;
 
@@ -24,12 +23,6 @@ public class UserController {
     public ResponseEntity<AuthenticationResponse> updateUserProfile(@RequestBody UserUpdateDto userUpdateDto, Authentication authentication) {
         AuthenticationResponse response = userService.updateUserProfile(userUpdateDto, authentication.getName());
         return ResponseEntity.ok(response);
-    }
-
-    @PutMapping("/profile/avatar") // Changed back to PutMapping
-    public ResponseEntity<String> updateAvatar(@RequestBody AvatarUrlDto avatarUrlDto, Authentication authentication) {
-        String avatarUrl = userService.updateAvatar(avatarUrlDto.getAvatarUrl(), authentication.getName());
-        return ResponseEntity.ok(avatarUrl);
     }
 
     @GetMapping
