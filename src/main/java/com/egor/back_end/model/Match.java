@@ -29,6 +29,14 @@ public class Match {
     )
     private Set<User> participants = new HashSet<>();
 
+    @ManyToMany
+    @JoinTable(
+            name = "match_bot_participants",
+            joinColumns = @JoinColumn(name = "match_id"),
+            inverseJoinColumns = @JoinColumn(name = "bot_id")
+    )
+    private Set<Bot> botParticipants = new HashSet<>();
+
     @Column(name = "match_number")
     private Integer matchNumber;
 
@@ -97,6 +105,14 @@ public class Match {
 
     public void setParticipants(Set<User> participants) {
         this.participants = participants;
+    }
+
+    public Set<Bot> getBotParticipants() {
+        return botParticipants;
+    }
+
+    public void setBotParticipants(Set<Bot> botParticipants) {
+        this.botParticipants = botParticipants;
     }
 
     public Integer getMatchNumber() {

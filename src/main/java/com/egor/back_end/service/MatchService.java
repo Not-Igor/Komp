@@ -6,6 +6,7 @@ import com.egor.back_end.dto.match.MatchScoreDto;
 import com.egor.back_end.dto.match.SubmitScoresDto;
 import com.egor.back_end.dto.user.UserDto;
 import com.egor.back_end.model.*;
+import com.egor.back_end.repository.BotRepository;
 import com.egor.back_end.repository.CompetitionRepository;
 import com.egor.back_end.repository.MatchRepository;
 import com.egor.back_end.repository.MatchScoreRepository;
@@ -24,17 +25,20 @@ public class MatchService {
     private final UserRepository userRepository;
     private final MatchScoreRepository matchScoreRepository;
     private final NotificationService notificationService;
+    private final BotRepository botRepository;
 
     public MatchService(MatchRepository matchRepository, 
                        CompetitionRepository competitionRepository,
                        UserRepository userRepository,
                        MatchScoreRepository matchScoreRepository,
-                       NotificationService notificationService) {
+                       NotificationService notificationService,
+                       BotRepository botRepository) {
         this.matchRepository = matchRepository;
         this.competitionRepository = competitionRepository;
         this.userRepository = userRepository;
         this.matchScoreRepository = matchScoreRepository;
         this.notificationService = notificationService;
+        this.botRepository = botRepository;
     }
 
     @Transactional
@@ -58,16 +62,33 @@ public class MatchService {
         Match match = new Match(title, competition, nextMatchNumber);
 
         Set<User> participants = new HashSet<>();
-        for (Long userId : dto.participantIds()) {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found: " + userId));
-            
-            if (!competition.getParticipants().contains(user)) {
-                throw new RuntimeException("User is not a participant of this competition");
+        Set<Bot> botParticipants = new HashSet<>();
+        
+        for (Long participantId : dto.participantIds()) {
+            if (participantId < 0) {
+                // Negative ID means it's a bot
+                Long botId = Math.abs(participantId);
+                Bot bot = botRepository.findById(botId)
+                        .orElseThrow(() -> new RuntimeException("Bot not found: " + botId));
+                
+                if (!bot.getCompetition().getId().equals(competition.getId())) {
+                    throw new RuntimeException("Bot is not part of this competition");
+                }
+                botParticipants.add(bot);
+            } else {
+                // Positive ID means it's a user
+                User user = userRepository.findById(participantId)
+                        .orElseThrow(() -> new RuntimeException("User not found: " + participantId));
+                
+                if (!competition.getParticipants().contains(user)) {
+                    throw new RuntimeException("User is not a participant of this competition");
+                }
+                participants.add(user);
             }
-            participants.add(user);
         }
+        
         match.setParticipants(participants);
+        match.setBotParticipants(botParticipants);
 
         // Auto-start match when created
         match.setStatus(MatchStatus.IN_PROGRESS);
@@ -184,14 +205,27 @@ public class MatchService {
     }
 
     private MatchDto toDto(Match match) {
-        List<UserDto> participants = match.getParticipants().stream()
+        List<UserDto> participants = new ArrayList<>();
+        
+        // Add regular user participants
+        match.getParticipants().stream()
                 .map(user -> new UserDto(
                         user.getId(),
                         user.getUsername(),
                         user.getEmail(),
                         user.getRole()
                 ))
-                .toList();
+                .forEach(participants::add);
+        
+        // Add bot participants with Role.BOT
+        match.getBotParticipants().stream()
+                .map(bot -> new UserDto(
+                        bot.getId(),
+                        bot.getUsername(),
+                        null,
+                        Role.BOT
+                ))
+                .forEach(participants::add);
 
         List<MatchScoreDto> scores = match.getScores().stream()
                 .map(score -> new MatchScoreDto(
