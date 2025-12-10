@@ -183,9 +183,20 @@ public class MatchService {
         match.getScores().clear();
         matchScoreRepository.flush();
 
-        // Add new scores
+        // Add new scores (only for real users, ignore bot IDs)
         for (Map.Entry<Long, Integer> entry : dto.scores().entrySet()) {
-            User participant = userRepository.findById(entry.getKey())
+            Long participantId = entry.getKey();
+            
+            // Check if this is a bot (bots are in match.getBotParticipants())
+            boolean isBot = match.getBotParticipants().stream()
+                    .anyMatch(bot -> bot.getId().equals(participantId));
+            
+            if (isBot) {
+                // Skip bots - they don't get stored scores
+                continue;
+            }
+            
+            User participant = userRepository.findById(participantId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
             if (!match.getParticipants().contains(participant)) {
