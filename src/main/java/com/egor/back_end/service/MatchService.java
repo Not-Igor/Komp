@@ -7,6 +7,7 @@ import com.egor.back_end.dto.match.SubmitScoresDto;
 import com.egor.back_end.dto.user.UserDto;
 import com.egor.back_end.model.*;
 import com.egor.back_end.repository.BotRepository;
+import com.egor.back_end.repository.BotScoreRepository;
 import com.egor.back_end.repository.CompetitionRepository;
 import com.egor.back_end.repository.MatchRepository;
 import com.egor.back_end.repository.MatchScoreRepository;
@@ -26,19 +27,22 @@ public class MatchService {
     private final MatchScoreRepository matchScoreRepository;
     private final NotificationService notificationService;
     private final BotRepository botRepository;
+    private final BotScoreRepository botScoreRepository;
 
     public MatchService(MatchRepository matchRepository, 
                        CompetitionRepository competitionRepository,
                        UserRepository userRepository,
                        MatchScoreRepository matchScoreRepository,
                        NotificationService notificationService,
-                       BotRepository botRepository) {
+                       BotRepository botRepository,
+                       BotScoreRepository botScoreRepository) {
         this.matchRepository = matchRepository;
         this.competitionRepository = competitionRepository;
         this.userRepository = userRepository;
         this.matchScoreRepository = matchScoreRepository;
         this.notificationService = notificationService;
         this.botRepository = botRepository;
+        this.botScoreRepository = botScoreRepository;
     }
 
     @Transactional
@@ -181,9 +185,11 @@ public class MatchService {
 
         // Clear existing scores
         match.getScores().clear();
+        match.getBotScores().clear();
         matchScoreRepository.flush();
+        botScoreRepository.flush();
 
-        // Add new scores (only for real users, ignore bot IDs)
+        // Add new scores (separate handling for users and bots)
         for (Map.Entry<Long, Integer> entry : dto.scores().entrySet()) {
             Long participantId = entry.getKey();
             
@@ -192,20 +198,26 @@ public class MatchService {
                     .anyMatch(bot -> bot.getId().equals(participantId));
             
             if (isBot) {
-                // Skip bots - they don't get stored scores
-                continue;
-            }
-            
-            User participant = userRepository.findById(participantId)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-            
-            if (!match.getParticipants().contains(participant)) {
-                throw new RuntimeException("User is not a participant of this match");
-            }
+                // Save bot score
+                Bot bot = botRepository.findById(participantId)
+                        .orElseThrow(() -> new RuntimeException("Bot not found"));
+                
+                BotScore botScore = new BotScore(match, bot, entry.getValue());
+                botScore.setConfirmed(true);
+                match.getBotScores().add(botScore);
+            } else {
+                // Save user score
+                User participant = userRepository.findById(participantId)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+                
+                if (!match.getParticipants().contains(participant)) {
+                    throw new RuntimeException("User is not a participant of this match");
+                }
 
-            MatchScore score = new MatchScore(match, participant, entry.getValue());
-            score.setConfirmed(true); // Auto-confirm since anyone can submit
-            match.getScores().add(score);
+                MatchScore score = new MatchScore(match, participant, entry.getValue());
+                score.setConfirmed(true); // Auto-confirm since anyone can submit
+                match.getScores().add(score);
+            }
         }
 
         match.setScoresSubmitted(true);
@@ -238,14 +250,27 @@ public class MatchService {
                 ))
                 .forEach(participants::add);
 
-        List<MatchScoreDto> scores = match.getScores().stream()
+        List<MatchScoreDto> scores = new ArrayList<>();
+        
+        // Add user scores
+        match.getScores().stream()
                 .map(score -> new MatchScoreDto(
                         score.getUser().getId(),
                         score.getUser().getUsername(),
                         score.getScore(),
                         score.isConfirmed()
                 ))
-                .toList();
+                .forEach(scores::add);
+        
+        // Add bot scores
+        match.getBotScores().stream()
+                .map(botScore -> new MatchScoreDto(
+                        botScore.getBot().getId(),
+                        botScore.getBot().getUsername(),
+                        botScore.getScore(),
+                        botScore.isConfirmed()
+                ))
+                .forEach(scores::add);
 
         return new MatchDto(
                 match.getId(),

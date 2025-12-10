@@ -56,6 +56,9 @@ public class Match {
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<MatchScore> scores = new HashSet<>();
 
+    @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<BotScore> botScores = new HashSet<>();
+
     @Column(name = "scores_submitted")
     private boolean scoresSubmitted = false;
 
@@ -161,6 +164,14 @@ public class Match {
 
     public void setScores(Set<MatchScore> scores) {
         this.scores = scores;
+    }
+
+    public Set<BotScore> getBotScores() {
+        return botScores;
+    }
+
+    public void setBotScores(Set<BotScore> botScores) {
+        this.botScores = botScores;
     }
 
     public boolean isScoresSubmitted() {
