@@ -128,9 +128,9 @@ public class CompetitionService {
                 allScores.put(score.getUser().getId(), score.getScore());
             }
             
-            // Add bot scores
+            // Add bot scores (use negative IDs to match statsMap)
             for (BotScore botScore : match.getBotScores()) {
-                allScores.put(botScore.getBot().getId(), botScore.getScore());
+                allScores.put(-botScore.getBot().getId(), botScore.getScore());
             }
             
             // Find highest score
