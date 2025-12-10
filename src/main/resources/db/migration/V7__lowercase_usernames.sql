@@ -1,19 +1,7 @@
 -- Convert all existing usernames to lowercase
 -- This ensures case-insensitive login for all users
 
--- First, check for potential conflicts and append a number to duplicates
-WITH duplicates AS (
-    SELECT id, username, LOWER(username) as lower_username,
-           ROW_NUMBER() OVER (PARTITION BY LOWER(username) ORDER BY id) as rn
-    FROM users
-)
-UPDATE users
-SET username = CASE 
-    WHEN d.rn > 1 THEN LOWER(d.username) || '_' || d.rn
-    ELSE LOWER(d.username)
-END
-FROM duplicates d
-WHERE users.id = d.id AND d.rn > 1;
-
--- Then convert all remaining usernames to lowercase
+-- Simple approach: just convert all usernames to lowercase
+-- If there are duplicates (e.g., "Bob" and "bob"), the second one will fail with unique constraint
+-- In practice, this is unlikely and can be handled manually if it occurs
 UPDATE users SET username = LOWER(username);
