@@ -118,38 +118,47 @@ public class CompetitionService {
         
         // Calculate statistics from matches
         for (Match match : matches) {
-            if (match.getScores().isEmpty()) continue;
+            if (match.getScores().isEmpty() && match.getBotScores().isEmpty()) continue;
             
-            // Get all participants in this match
-            Set<Long> matchParticipantIds = match.getParticipants().stream()
-                    .map(User::getId)
-                    .collect(Collectors.toSet());
+            // Collect all scores (users + bots) for comparison
+            Map<Long, Integer> allScores = new HashMap<>();
+            
+            // Add user scores
+            for (MatchScore score : match.getScores()) {
+                allScores.put(score.getUser().getId(), score.getScore());
+            }
+            
+            // Add bot scores
+            for (BotScore botScore : match.getBotScores()) {
+                allScores.put(botScore.getBot().getId(), botScore.getScore());
+            }
             
             // Find highest score
-            Integer highestScore = match.getScores().stream()
-                    .map(MatchScore::getScore)
+            Integer highestScore = allScores.values().stream()
                     .max(Integer::compareTo)
                     .orElse(0);
             
             // Find all participants with highest score (for draws)
-            List<Long> winners = match.getScores().stream()
-                    .filter(score -> score.getScore().equals(highestScore))
-                    .map(score -> score.getUser().getId())
+            List<Long> winners = allScores.entrySet().stream()
+                    .filter(entry -> entry.getValue().equals(highestScore))
+                    .map(Map.Entry::getKey)
                     .toList();
             
             boolean isDraw = winners.size() > 1;
             
             // Update stats for each participant in the match
-            for (MatchScore score : match.getScores()) {
-                Long userId = score.getUser().getId();
-                ParticipantStats stats = statsMap.get(userId);
+            for (Map.Entry<Long, Integer> entry : allScores.entrySet()) {
+                Long participantId = entry.getKey();
+                Integer score = entry.getValue();
+                
+                ParticipantStats stats = statsMap.get(participantId);
                 if (stats != null) {
                     stats.matchesPlayed++;
-                    stats.pointsScored += score.getScore();
+                    stats.pointsScored += score;
                     
                     if (isDraw) {
                         stats.draws++;
-                    } else if (winners.contains(userId)) {
+                    } else if (winners.contains(participantId)) {
                         stats.wins++;
                     } else {
                         stats.losses++;
