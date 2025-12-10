@@ -174,9 +174,9 @@ public class MatchService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Any participant can submit scores
-        if (!match.getParticipants().contains(user)) {
-            throw new RuntimeException("Only participants can submit scores");
+        // Any competition participant can submit scores (including for bot-only matches)
+        if (!match.getCompetition().getParticipants().contains(user)) {
+            throw new RuntimeException("Only competition participants can submit scores");
         }
 
         if (match.getStatus() != MatchStatus.IN_PROGRESS && match.getStatus() != MatchStatus.COMPLETED) {
