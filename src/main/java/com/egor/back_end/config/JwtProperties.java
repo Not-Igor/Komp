@@ -8,6 +8,6 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "jwt")
 public record JwtProperties(String secretKey,
                             @DefaultValue Token token) {
-    public record Token(@DefaultValue("football_app") String issuer,
+    public record Token(@DefaultValue("komp_app") String issuer,
                         @DefaultValue("8h") Duration lifetime) {}
 }

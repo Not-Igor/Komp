@@ -11,6 +11,6 @@ import java.util.Map;
 public class StatusController {
     @GetMapping
     public Map<String, String> getStatus() {
-        return Map.of("message", "Football API is running...");
+        return Map.of("message", "KompApp API is running...");
     }
 }
