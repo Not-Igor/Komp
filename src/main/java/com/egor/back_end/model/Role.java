@@ -9,7 +9,8 @@ import java.util.Locale;
 public enum Role {
     ADMIN,
     USER,
-    GUEST;
+    GUEST,
+    BOT;
 
     public GrantedAuthority toGrantedAuthority() {
         return new SimpleGrantedAuthority("ROLE_" + name());

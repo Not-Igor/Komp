@@ -9,6 +9,11 @@ public record UserDto(
         Long id,
         String username,
         String email,
-        Role role
-) {}
+        Role role,
+        Boolean isBot
+) {
+    public UserDto(Long id, String username, String email, Role role) {
+        this(id, username, email, role, role == Role.BOT);
+    }
+}
 
