@@ -9,8 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -121,5 +123,54 @@ public class FriendRequestService {
         }
 
         friendRequestRepository.delete(friendRequest);
+    }
+
+    public List<User> getFriendSuggestions(Long userId, int limit) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found!"));
+        
+        Set<User> currentFriends = user.getFriends();
+        Set<User> suggestions = new HashSet<>();
+        
+        // Get friends of friends
+        for (User friend : currentFriends) {
+            Set<User> friendsOfFriend = friend.getFriends();
+            for (User potentialFriend : friendsOfFriend) {
+                // Don't suggest:
+                // 1. The user themselves
+                // 2. Current friends
+                // 3. Users with pending/existing friend requests
+                if (!potentialFriend.equals(user) 
+                    && !currentFriends.contains(potentialFriend)
+                    && !friendRequestRepository.existsRequestBetweenUsers(user, potentialFriend)) {
+                    suggestions.add(potentialFriend);
+                }
+            }
+        }
+        
+        // Sort by number of mutual friends (descending)
+        return suggestions.stream()
+                .sorted((u1, u2) -> {
+                    int mutualCount1 = getMutualFriendsCount(user, u1);
+                    int mutualCount2 = getMutualFriendsCount(user, u2);
+                    return Integer.compare(mutualCount2, mutualCount1);
+                })
+                .limit(limit)
+                .toList();
+    }
+    
+    public int getMutualFriendsCount(User user1, User user2) {
+        Set<User> friends1 = user1.getFriends();
+        Set<User> friends2 = user2.getFriends();
+        
+        Set<User> mutualFriends = new HashSet<>(friends1);
+        mutualFriends.retainAll(friends2);
+        
+        return mutualFriends.size();
+    }
+    
+    public User getUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found!"));
     }
 }

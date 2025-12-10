@@ -60,4 +60,27 @@ public class FriendRequestController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @GetMapping("/suggestions/{userId}")
+    public ResponseEntity<List<com.egor.back_end.dto.user.FriendSuggestionDto>> getFriendSuggestions(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "10") int limit) {
+        try {
+            List<com.egor.back_end.model.User> suggestions = friendRequestService.getFriendSuggestions(userId, limit);
+            List<com.egor.back_end.dto.user.FriendSuggestionDto> dtoList = suggestions.stream()
+                    .map(user -> {
+                        com.egor.back_end.model.User currentUser = friendRequestService.getUserById(userId);
+                        int mutualCount = friendRequestService.getMutualFriendsCount(currentUser, user);
+                        return new com.egor.back_end.dto.user.FriendSuggestionDto(
+                                user.getId(),
+                                user.getUsername(),
+                                mutualCount
+                        );
+                    })
+                    .toList();
+            return ResponseEntity.ok(dtoList);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
 }
