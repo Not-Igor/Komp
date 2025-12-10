@@ -2,9 +2,11 @@ package com.egor.back_end.service;
 
 import com.egor.back_end.dto.competition.CompetitionCreateDto;
 import com.egor.back_end.dto.competition.CompetitionDto;
+import com.egor.back_end.dto.competition.CompetitionParticipantDto;
 import com.egor.back_end.dto.competition.ParticipantDto;
 import com.egor.back_end.dto.user.UserDto;
 import com.egor.back_end.model.*;
+import com.egor.back_end.repository.BotRepository;
 import com.egor.back_end.repository.CompetitionRepository;
 import com.egor.back_end.repository.MatchRepository;
 import com.egor.back_end.repository.UserRepository;
@@ -21,15 +23,18 @@ public class CompetitionService {
     private final UserRepository userRepository;
     private final MatchRepository matchRepository;
     private final NotificationService notificationService;
+    private final BotRepository botRepository;
 
     public CompetitionService(CompetitionRepository competitionRepository, 
                             UserRepository userRepository,
                             MatchRepository matchRepository,
-                            NotificationService notificationService) {
+                            NotificationService notificationService,
+                            BotRepository botRepository) {
         this.competitionRepository = competitionRepository;
         this.userRepository = userRepository;
         this.matchRepository = matchRepository;
         this.notificationService = notificationService;
+        this.botRepository = botRepository;
     }
 
     @Transactional
@@ -97,10 +102,18 @@ public class CompetitionService {
                 .filter(match -> match.getStatus() == MatchStatus.COMPLETED)
                 .toList();
         
-        // Initialize statistics for each participant
+        // Initialize statistics for each participant (users)
         Map<Long, ParticipantStats> statsMap = new HashMap<>();
         for (User participant : competition.getParticipants()) {
-            statsMap.put(participant.getId(), new ParticipantStats(participant.getId(), participant.getUsername()));
+            statsMap.put(participant.getId(), new ParticipantStats(participant.getId(), participant.getUsername(), false));
+        }
+        
+        // Add bots to participants (use negative IDs to distinguish from users)
+        List<Bot> bots = botRepository.findByCompetitionId(competitionId);
+        for (Bot bot : bots) {
+            // Use negative ID based on bot's actual ID to ensure uniqueness
+            Long botVirtualId = -bot.getId();
+            statsMap.put(botVirtualId, new ParticipantStats(botVirtualId, bot.getUsername(), true));
         }
         
         // Calculate statistics from matches
@@ -154,7 +167,8 @@ public class CompetitionService {
                         stats.matchesPlayed,
                         stats.draws,
                         stats.losses,
-                        stats.pointsScored
+                        stats.pointsScored,
+                        stats.isBot
                 ))
                 .sorted((a, b) -> Integer.compare(b.wins(), a.wins()))
                 .collect(Collectors.toList());
@@ -164,15 +178,17 @@ public class CompetitionService {
     private static class ParticipantStats {
         Long userId;
         String username;
+        Boolean isBot;
         int wins = 0;
         int matchesPlayed = 0;
         int draws = 0;
         int losses = 0;
         int pointsScored = 0;
         
-        ParticipantStats(Long userId, String username) {
+        ParticipantStats(Long userId, String username, Boolean isBot) {
             this.userId = userId;
             this.username = username;
+            this.isBot = isBot;
         }
     }
 
@@ -285,5 +301,33 @@ public class CompetitionService {
                 competition.getCreatedAt(),
                 competition.getUpdatedAt()
         );
+    }
+
+    public List<CompetitionParticipantDto> getAllSelectableParticipants(Long competitionId) {
+        Competition competition = competitionRepository.findById(competitionId)
+                .orElseThrow(() -> new IllegalArgumentException("Competition not found"));
+        
+        List<CompetitionParticipantDto> result = new ArrayList<>();
+        
+        // Add all user participants
+        for (User participant : competition.getParticipants()) {
+            result.add(new CompetitionParticipantDto(
+                participant.getId(),
+                participant.getUsername(),
+                false
+            ));
+        }
+        
+        // Add all bots (use negative IDs)
+        List<Bot> bots = botRepository.findByCompetitionId(competitionId);
+        for (Bot bot : bots) {
+            result.add(new CompetitionParticipantDto(
+                -bot.getId(), // Negative ID to distinguish from users
+                bot.getUsername(),
+                true
+            ));
+        }
+        
+        return result;
     }
 }

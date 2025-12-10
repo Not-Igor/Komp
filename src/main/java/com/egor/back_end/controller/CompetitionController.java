@@ -2,6 +2,7 @@ package com.egor.back_end.controller;
 
 import com.egor.back_end.dto.competition.CompetitionCreateDto;
 import com.egor.back_end.dto.competition.CompetitionDto;
+import com.egor.back_end.dto.competition.CompetitionParticipantDto;
 import com.egor.back_end.dto.competition.ParticipantDto;
 import com.egor.back_end.service.CompetitionService;
 import jakarta.validation.Valid;
@@ -52,6 +53,12 @@ public class CompetitionController {
     @GetMapping("/{id}/participants")
     public ResponseEntity<List<ParticipantDto>> getParticipants(@PathVariable Long id) {
         List<ParticipantDto> participants = competitionService.getParticipants(id);
+        return ResponseEntity.ok(participants);
+    }
+
+    @GetMapping("/{id}/selectable-participants")
+    public ResponseEntity<List<CompetitionParticipantDto>> getSelectableParticipants(@PathVariable Long id) {
+        List<CompetitionParticipantDto> participants = competitionService.getAllSelectableParticipants(id);
         return ResponseEntity.ok(participants);
     }
 

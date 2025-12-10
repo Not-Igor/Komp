@@ -7,5 +7,12 @@ public record ParticipantDto(
         Integer matchesPlayed,
         Integer draws,
         Integer losses,
-        Integer pointsScored
-) {}
+        Integer pointsScored,
+        Boolean isBot
+) {
+    // Constructor for users (no isBot parameter, defaults to false)
+    public ParticipantDto(Long id, String username, Integer wins, Integer matchesPlayed, 
+                         Integer draws, Integer losses, Integer pointsScored) {
+        this(id, username, wins, matchesPlayed, draws, losses, pointsScored, false);
+    }
+}
