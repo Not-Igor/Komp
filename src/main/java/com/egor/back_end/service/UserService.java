@@ -39,7 +39,7 @@ public class UserService {
     }
 
     public AuthenticationResponse authenticate(String username, String password) {
-        final var usernamePasswordAuthentication = new UsernamePasswordAuthenticationToken(username, password);
+        final var usernamePasswordAuthentication = new UsernamePasswordAuthenticationToken(username.toLowerCase(), password);
         final var authentication = authenticationManager.authenticate(usernamePasswordAuthentication);
         final var user = ((UserDetailsImpl) authentication.getPrincipal()).getUser();
         final var token = jwtService.generateToken(user);
@@ -54,12 +54,13 @@ public class UserService {
     }
 
     public User signup(UserCreateDto userCreateDto) {
-        if (userRepository.existsByUsername(userCreateDto.username())) {
+        String lowercaseUsername = userCreateDto.username().toLowerCase();
+        if (userRepository.existsByUsername(lowercaseUsername)) {
             throw new SignupException("Username is already in use!");
         }
 
         User user = new User(
-                userCreateDto.username(),
+                lowercaseUsername,
                 passwordEncoder.encode(userCreateDto.password()),
                 Role.USER
         );
@@ -115,10 +116,11 @@ public class UserService {
         boolean usernameChanged = false;
         // Update username
         if (dto.getNewUsername() != null && !dto.getNewUsername().isBlank() && !dto.getNewUsername().equals(currentUsername)) {
-            if (userRepository.existsByUsername(dto.getNewUsername())) {
+            String lowercaseNewUsername = dto.getNewUsername().toLowerCase();
+            if (userRepository.existsByUsername(lowercaseNewUsername)) {
                 throw new IllegalArgumentException("Username is already taken");
             }
-            user.setUsername(dto.getNewUsername());
+            user.setUsername(lowercaseNewUsername);
             usernameChanged = true;
         }
 
